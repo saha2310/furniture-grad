@@ -15,6 +15,27 @@ export interface AiImageResult {
   error?: string;
 }
 
+export interface AiUsageStatus {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+// Текущий расход дневного лимита обработок — используется в шапке админки,
+// чтобы было видно, сколько обработок фото ещё доступно сегодня.
+export async function getAiUsageStatus(): Promise<AiUsageStatus> {
+  try {
+    const supabase = await createClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: row } = await supabase.from('ai_usage').select('count').eq('day', today).maybeSingle();
+    const used = row?.count ?? 0;
+    return { used, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - used) };
+  } catch {
+    // Если Supabase недоступен — не роняем страницу админки из-за счётчика.
+    return { used: 0, limit: DAILY_LIMIT, remaining: DAILY_LIMIT };
+  }
+}
+
 async function checkAndIncrementDailyLimit(): Promise<{ allowed: boolean }> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);

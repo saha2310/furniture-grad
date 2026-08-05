@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { AI_TEMPLATES } from '@/lib/ai-templates';
+import { AI_TEMPLATES, getTemplateById } from '@/lib/ai-templates';
 import { processProductImage } from '@/actions/ai-image';
+import { composeGradientFile } from '@/lib/gradient-compose';
 
 function base64ToFile(base64: string, mimeType: string, filename: string): File {
   const bytes = atob(base64);
@@ -23,10 +24,37 @@ export function AiEditModal({
   const [error, setError] = useState<string | null>(null);
   const previewUrl = URL.createObjectURL(sourceFile);
 
+  // Прозрачный вырез с PhotoRoom запрашивается один раз и кэшируется здесь —
+  // все градиентные шаблоны переиспользуют его, без новых вызовов API.
+  const [cutout, setCutout] = useState<{ base64: string; mimeType: string } | null>(null);
+
+  const fetchCutout = async (): Promise<{ base64: string; mimeType: string }> => {
+    if (cutout) return cutout;
+    const formData = new FormData();
+    formData.set('image', sourceFile);
+    formData.set('templateId', 'transparent');
+    const result = await processProductImage(formData);
+    if (!result.ok || !result.imageBase64) {
+      throw new Error(result.error || 'Не удалось вырезать товар с фото.');
+    }
+    const fresh = { base64: result.imageBase64, mimeType: result.mimeType || 'image/png' };
+    setCutout(fresh);
+    return fresh;
+  };
+
   const runTemplate = async (templateId: string) => {
     setError(null);
     setIsLoading(true);
     try {
+      const template = getTemplateById(templateId);
+
+      if (template?.kind === 'gradient' && template.gradient) {
+        const base = await fetchCutout();
+        const file = await composeGradientFile(base.base64, base.mimeType, template.gradient, `ai-result-${templateId}.jpg`);
+        onApply(file);
+        return;
+      }
+
       const formData = new FormData();
       formData.set('image', sourceFile);
       formData.set('templateId', templateId);
@@ -41,8 +69,8 @@ export function AiEditModal({
       const ext = result.mimeType === 'image/png' ? 'png' : 'jpg';
       const file = base64ToFile(result.imageBase64, result.mimeType || 'image/jpeg', `ai-result.${ext}`);
       onApply(file);
-    } catch {
-      setError('Не удалось связаться с сервером — проверьте соединение и попробуйте снова.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось связаться с сервером — проверьте соединение и попробуйте снова.');
     } finally {
       setIsLoading(false);
     }

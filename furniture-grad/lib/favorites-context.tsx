@@ -7,6 +7,7 @@ const FavoritesContext = createContext<{
   ids: string[];
   isFavorite: (id: string) => boolean;
   toggle: (id: string) => void;
+  removeStale: (staleIds: string[]) => void;
 } | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
@@ -38,8 +39,16 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
   const isFavorite = (id: string) => ids.includes(id);
 
+  // Убирает из избранного id товаров, которых больше не существует (удалены
+  // или сняты с публикации админом) — иначе счётчик "♥ Избранное N" в шапке
+  // навсегда зависает на старом числе, хотя сама страница избранного пустая.
+  const removeStale = (staleIds: string[]) => {
+    if (staleIds.length === 0) return;
+    setIds(prev => prev.filter(id => !staleIds.includes(id)));
+  };
+
   return (
-    <FavoritesContext.Provider value={{ ids, isFavorite, toggle }}>
+    <FavoritesContext.Provider value={{ ids, isFavorite, toggle, removeStale }}>
       {children}
     </FavoritesContext.Provider>
   );

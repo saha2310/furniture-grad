@@ -6,12 +6,17 @@ import { ProductCard } from '@/components/product-card';
 import { Product } from '@/lib/types';
 
 export default function FavoritesPage() {
-  const { ids } = useFavorites();
+  const { ids, removeStale } = useFavorites();
   const [products, setProducts] = useState<Product[] | null>(null);
 
   useEffect(() => {
-    getProductsByIds(ids).then(setProducts);
-  }, [ids]);
+    getProductsByIds(ids).then(fetched => {
+      setProducts(fetched);
+      const validIds = new Set(fetched.map(p => p.id));
+      const stale = ids.filter(id => !validIds.has(id));
+      if (stale.length > 0) removeStale(stale);
+    });
+  }, [ids, removeStale]);
 
   return (
     <div className="max-w-[1400px] mx-auto px-5 py-10">

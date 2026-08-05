@@ -15,9 +15,12 @@ export interface PixelCrop {
   height: number;
 }
 
-// Максимальная ширина/высота готового файла — крупные фото с телефона (12+ Мп)
-// не нужны для витрины и только замедляют сайт и грузят Storage.
-const MAX_OUTPUT_DIMENSION = 1600;
+// Максимальная ширина/высота готового файла. Раньше было 1600px/85% JPEG —
+// заметно мылило фото, особенно после обработки в PhotoRoom. Подняли до
+// 3000px и почти без потерь по качеству (0.95). Файлы стали крупнее (обычно
+// 1–3 МБ вместо 200–400 КБ), это осознанный компромисс в пользу чёткости.
+const MAX_OUTPUT_DIMENSION = 3000;
+const JPEG_QUALITY = 0.95;
 
 // Вырезает область pixelCrop из картинки по адресу imageSrc, при необходимости
 // уменьшает результат до разумного размера и превращает в компактный File,
@@ -55,7 +58,7 @@ export async function getCroppedImageFile(
     canvas.toBlob(blob => {
       if (!blob) { reject(new Error('Не удалось создать изображение')); return; }
       resolve(new File([blob], fileName, { type: 'image/jpeg' }));
-    }, 'image/jpeg', 0.85);
+    }, 'image/jpeg', JPEG_QUALITY);
   });
 }
 
@@ -79,7 +82,7 @@ export async function resizeImageFile(file: File): Promise<File> {
       canvas.toBlob(blob => {
         if (!blob) { reject(new Error('Не удалось создать изображение')); return; }
         resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-      }, 'image/jpeg', 0.85);
+      }, 'image/jpeg', JPEG_QUALITY);
     });
   } finally {
     URL.revokeObjectURL(url);
