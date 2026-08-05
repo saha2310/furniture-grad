@@ -9,7 +9,7 @@ export interface AiTemplate {
   description: string;
   /** Параметры для PhotoRoom API (см. actions/ai-image.ts) */
   params: {
-    bgColor?: string; // hex без решётки, например 'FFFFFF'. Не задан = прозрачный фон.
+    bgColor?: string; // hex с решёткой, например '#FFFFFF' (PhotoRoom требует '#' в значении). Не задан = прозрачный фон.
     format: 'png' | 'jpg';
     crop: boolean;
   };
@@ -21,14 +21,14 @@ export const AI_TEMPLATES: AiTemplate[] = [
     label: 'Белый студийный фон',
     icon: '⬜',
     description: 'Чистый белый фон вместо исходного',
-    params: { bgColor: 'FFFFFF', format: 'jpg', crop: true },
+    params: { bgColor: '#FFFFFF', format: 'jpg', crop: true },
   },
   {
     id: 'catalog-cover',
     label: 'Обложка каталога',
     icon: '🖼️',
     description: 'Серый фон под цвет сайта (#f0f0f0)',
-    params: { bgColor: 'F0F0F0', format: 'jpg', crop: true },
+    params: { bgColor: '#F0F0F0', format: 'jpg', crop: true },
   },
   {
     id: 'transparent',
